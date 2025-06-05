@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<link rel="stylesheet" href="styles.css" />
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Jeu des points</title>
+<style>
+  body, html { margin: 0; padding: 0; height: 100%; background: black; }
+  #canvas { display: block; margin: auto; background: black; cursor: crosshair; }
+  #colorPicker { position: fixed; top: 10px; left: 10px; }
+</style>
+</head>
+<body>
+
+<label for="colorPicker" class="visually-hidden">Choisissez votre couleur</label>
+<input type="color" id="colorPicker" value="#ff0000" />
+
+<canvas id="canvas" width="800" height="600"></canvas>
+
+<script>
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const colorPicker = document.getElementById('colorPicker');
+  let points = [];
+
+  // Charger les points depuis le backend
+  async function loadPoints() {
+    const res = await fetch('http://localhost:3000/points');
+    points = await res.json();
+    drawPoints();
+  }
+
+  // Dessiner tous les points
+  function drawPoints() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    points.forEach(p => {
+      ctx.fillStyle = p.couleur;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 5, 0, 2 * Math.PI);
+      ctx.fill();
+    });
+  }
+
+  // Quand on clique, envoyer le point au serveur et l'afficher
+  canvas.addEventListener('click', async (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor(e.clientX - rect.left);
+    const y = Math.floor(e.clientY - rect.top);
+    const couleur = colorPicker.value;
+
+    const res = await fetch('http://localhost:3000/points', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ x, y, couleur })
+    });
+
+    if (res.ok) {
+      const point = await res.json();
+      points.push(point);
+      drawPoints();
+    } else {
+      alert('Erreur lors de l\'ajout du point.');
+    }
+  });
+
+  loadPoints();
+</script>
+
+</body>
+</html>
